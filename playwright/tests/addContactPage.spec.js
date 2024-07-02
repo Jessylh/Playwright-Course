@@ -1,61 +1,94 @@
-const { test, expect } = require("@playwright/test")
-const { USER, PASSWORD } = process.env
+const { test, expect } = require('@playwright/test');
+const { USER, PASSWORD } = process.env;
+const LoginPage = require('../pageObjects/login.page');
+const ContactListPage = require('../pageObjects/contactList.page');
+const AddANewContactPage = require('../pageObjects/addANewContact.page');
+const ContactDetailsPage = require('../pageObjects/contactDetails.page')
+const { faker } = require('@faker-js/faker');
 
-test.describe("Login", () => {
+let loginPage;
+let contactListPage;
+let addANewContactPage
+let contactDetailsPage
+
+
+test.describe('Login', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto("/");
-        await page.locator("#email").fill(USER)
-        await page.locator("#password").fill(PASSWORD)
-        await page.locator("#submit").click()
-
-        // Header Assertion
-        await expect(page.getByText("Contact List")).toBeVisible();
+        loginPage = new LoginPage(page);
+        contactListPage = new ContactListPage(page);
+        addANewContactPage = new AddANewContactPage(page)
+        contactDetailsPage = new ContactDetailsPage(page)
+        await page.goto('/');
+        await loginPage.login(USER, PASSWORD);
+        // Verify that the contact list header is visible
+        await contactListPage.isContactListHeaderVisible();
     });
 
-    test("Verify user is able to add a new contact ", async ({ page }) => {
-        //Header Assertion
-        await expect(page.getByText("Contact List")).toBeVisible("Contact List")
-
-        //Add new contact
-        await page.pause();
-        await page.locator("#add-contact").click()
-        await page.locator("#firstName").fill("Jessy")
-        await page.locator("#lastName").fill("H")
-        await page.locator("#birthdate").fill("1996-07-23")
-        await page.locator("#email").fill("jogeh79883@acuxi.com")
-        await page.locator("#phone").fill("80005000")
-        await page.locator("#street1").fill("Main street 1023")
-        await page.locator("#street2").fill("Main street 4050")
-        await page.locator("#city").fill("Guadalupe")
-        await page.locator("#stateProvince").fill("San Jose")
-        await page.locator("#postalCode").fill("10400")
-        await page.locator("#country").fill("Costa Rica")
-
+    test('Verify that the user is able add new contact', async ({ page }) => {
+        // Login
+        await contactListPage.clickOnAddNewContactBtn()
+        await addANewContactPage.fillFirstName('Jessy');
+        await addANewContactPage.fillLastName("H")
+        await addANewContactPage.fillBirthDate("1996-07-23")
+        await addANewContactPage.fillEmail("jogeh79883@acuxi.com")
+        await addANewContactPage.fillPhone("80005000")
+        await addANewContactPage.fillStreet1("Main street 1023")
+        await addANewContactPage.fillStreet2("Main street 4050")
+        await addANewContactPage.fillCity("Guadalupe")
+        await addANewContactPage.fillStateProvince("San Jose")
+        await addANewContactPage.fillPostalCode("10400")
+        await addANewContactPage.fillCountry("Costa Rica")
         //Submit the form
-        await page.locator("#submit").click()
-        const url = "https://thinking-tester-contact-list.herokuapp.com/contactList"
-        await expect(page).toHaveURL(url)
+        await addANewContactPage.clickOnSubmitBtn()
+        await contactListPage.userIsRedirectedToContactPage()
 
         //Assertion - Verify that the new contact was successfully created by first name
-        await expect(page.getByText("Jessy H")).toBeVisible()
-        await page.getByRole("cell", { name: "Jessy H" }).click()
+        await contactListPage.isNewContactCreatedVisible('Jessy H')
+        await contactListPage.clickOnNewContacCreatedBtn()
+
 
         //Delete the contact created by dialog pop up
-        page.on("dialog", async dialog => {
-            //await expect(dialog).toBeVisible({ timeout: 30000 })
-            await dialog.accept()
-        });
+        //await contactDetailsPage.deleteContactCreated()
+        //await contactDetailsPage.clickOnDeleteBtn()
+    });
 
-        await page.locator("#delete").click()
-        await expect(page).toHaveURL(url)
-        //await page.goto("/contactList");
+    test('Verify that the user is able add new contact by faker', async ({ page }) => {
 
-        //Assertion - Verify that the new contact was successfully removed
-        const contactItemCreated = await page.getByText("Jessy H");
-        await expect(contactItemCreated).toBeHidden();
+        // Utilizando un objeto para almacenar los datos falsos
+        const randomFirstName = faker.person.fullName()
+        const randomLastName = faker.person.lastName()
+        const randomEmail = faker.internet.email()
+        const randomAddress1 = faker.address.streetAddress()
+        const randomAddress2 = faker.address.streetAddress()
+        const randomCity = faker.address.city();
+        const randomState = faker.address.state()
+        const randomZipCode = faker.address.zipCode()
+        const randomCountry = faker.address.country();
+
+        await contactListPage.clickOnAddNewContactBtn();
+        await addANewContactPage.fillFirstName(randomFirstName);
+        await addANewContactPage.fillLastName(randomLastName);
+        await addANewContactPage.fillBirthDate("1996-07-23");
+        await addANewContactPage.fillEmail(randomEmail)
+        await addANewContactPage.fillPhone("80005000")
+        await addANewContactPage.fillStreet1(randomAddress1)
+        await addANewContactPage.fillStreet2(randomAddress2)
+        await addANewContactPage.fillCity(randomCity)
+        await addANewContactPage.fillStateProvince(randomState)
+        await addANewContactPage.fillPostalCode(randomZipCode)
+        await addANewContactPage.fillCountry(randomCountry)
+
+        //Submit the form
+        await addANewContactPage.clickOnSubmitBtn()
+        await contactListPage.userIsRedirectedToContactPage()
+
+        //Assertion - Verify that the new contact was successfully created by first name
+        await contactListPage.isNewContactCreatedVisible(randomFirstName)
+        await contactListPage.clickOnNewContacCreatedBtn()
     });
 
 });
 
-//npx playwright test
-//npx playwright test --headed
+// npm run test
+// npx playwright test
+// npx playwright test --headed
